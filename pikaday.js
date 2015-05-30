@@ -269,12 +269,19 @@
         return abbr ? opts.i18n.weekdaysShort[day] : opts.i18n.weekdays[day];
     },
 
-    renderDay = function(d, m, y, isSelected, isToday, isDisabled, isEmpty)
-    {
-        if (isEmpty) {
-            return '<td class="is-empty"></td>';
-        }
+    renderDay = function (d, m, y, isSelected, isToday, isDisabled, isEmpty, isHighlighted, highlightGroup, showDaysInNextAndPreviousMonths, monthDifference) {
         var arr = [];
+        var month = m;
+
+        if (isEmpty) {
+            if (showDaysInNextAndPreviousMonths) {
+                arr.push('is-outside-current-month');
+                month = month + monthDifference;
+            } else {
+                return '<td class="is-empty"></td>';
+            }
+        }
+
         if (isDisabled) {
             arr.push('is-disabled');
         }
@@ -284,9 +291,17 @@
         if (isSelected) {
             arr.push('is-selected');
         }
+
+        if (highlightGroup != null) {
+            arr.push(highlightGroup);
+        }
+        if (isHighlighted != null) {
+            arr.push(isHighlighted);
+        }
+
         return '<td data-day="' + d + '" class="' + arr.join(' ') + '">' +
                  '<button class="pika-button pika-day" type="button" ' +
-                    'data-pika-year="' + y + '" data-pika-month="' + m + '" data-pika-day="' + d + '">' +
+                    'data-pika-year="' + y + '" data-pika-month="' + month + '" data-pika-day="' + d + '">' +
                         d +
                  '</button>' +
                '</td>';
@@ -385,7 +400,58 @@
         return '<table cellpadding="0" cellspacing="0" class="pika-table">' + renderHead(opts) + renderBody(data) + '</table>';
     },
 
+    compareRoundDates = function (a, b) {
+        return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDate() == b.getDate();
+    },
 
+    checkHighlightedDays = function (day, days) {
+        if (days) {
+            for (var day_i = 0, day_count = days.length; day_i < day_count; day_i++) {
+
+                var hDay = days[day_i];
+                var isHighlighted = hDay.getTime() === day.getTime();
+                if (isHighlighted) {
+                    return "is-highlighted highlighted-index-" + day_i;
+                }
+            }
+        }
+    },
+
+    checkHighlightRange = function (day, ranges) {
+        var isHighlighted = false;
+
+        if (ranges) {
+
+            for (var highlightGroup in ranges) {
+
+                var group = ranges[highlightGroup];
+                var min = group[0];
+                var max = group[1];
+                isHighlighted = (min <= day) && (day <= max);
+
+                if (isHighlighted) {
+
+                    if (compareRoundDates(min, day)) {
+                        highlightGroup += " start";
+                    }
+
+                    else if (compareRoundDates(max, day)) {
+                        highlightGroup += " end";
+                    }
+
+                    return "highlight-group-" + highlightGroup;
+                }
+            }
+        }
+
+        return null;
+    },
+
+    preProcessHighlightDays = function (highlightDays) {
+        for (var highlightIndex = 0; highlightIndex < highlightDays.length; highlightIndex++) {
+            setToStartOfDay(highlightDays[highlightIndex]);
+        }
+    },
     /**
      * Pikaday constructor
      */
@@ -393,6 +459,10 @@
     {
         var self = this,
             opts = self.config(options);
+
+        if (options.highlightDays) {
+            preProcessHighlightDays(options.highlightDays);
+        }
 
         self._onMouseDown = function(e)
         {
@@ -822,7 +892,33 @@
          */
         setMaxDate: function(value)
         {
+            setToStartOfDay(value);
             this._o.maxDate = value;
+            this._o.maxYear = value.getFullYear();
+            this._o.maxMonth = value.getMonth();
+        },
+
+        //Editted
+        /**
+         * change the highlihgtRanges
+         * @value: hash object where item-key is # in "highlight-group-#" style assigned to day cells in range
+         * and item-value is array of two Date objects denoting range boundaries (earlier date first)
+         */
+        setHighlightRanges: function (value) {
+            //Edit v3
+            //TODO call setStartOfDay for each day obj.
+            this._o.highlightRanges = value;
+        },
+
+        /**
+         * change the highlihgtDays
+         * @value: array of Date object
+         */
+        setHighlightDays: function (value) {
+            //Editted v3
+            preProcessHighlightDays(value);
+            //Editted v3
+            this._o.highlightDays = value;
         },
 
         /**
@@ -939,6 +1035,11 @@
                     before += 7;
                 }
             }
+
+            var previousMonth = month === 0 ? 11 : month - 1,
+                yearOfPreviousMonth = month === 0 ? year - 1 : year,
+                daysInPreviousMonth = getDaysInMonth(yearOfPreviousMonth, previousMonth);
+
             var cells = days + before,
                 after = cells;
             while(after > 7) {
@@ -956,7 +1057,23 @@
                                  (opts.disableWeekends && isWeekend(day)) ||
                                  (opts.disableDayFn && opts.disableDayFn(day));
 
-                row.push(renderDay(1 + (i - before), month, year, isSelected, isToday, isDisabled, isEmpty));
+                var dayNumber = 1 + (i - before);
+                var monthDifference = 0;
+
+                if (isEmpty) {
+                    if (i < before) {
+                        dayNumber = daysInPreviousMonth + dayNumber;
+                        monthDifference = -1;
+                    } else {
+                        dayNumber = dayNumber - days;
+                        monthDifference = 1;
+                    }
+                }
+
+                var isHighlighted = checkHighlightedDays(day, opts.highlightDays),
+                    isInHighlightGroup = checkHighlightRange(day, opts.highlightRanges);
+
+                row.push((dayNumber, month, year, isSelected, isToday, isDisabled, isEmpty, isHighlighted, isInHighlightGroup, opts.showDaysInNextAndPreviousMonths, monthDifference));
 
                 if (++r === 7) {
                     if (opts.showWeekNumber) {
