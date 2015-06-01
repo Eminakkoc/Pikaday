@@ -1,6 +1,6 @@
 {
   "name": "pikaday-mortargrind",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "A refreshing JavaScript Datepicker — lightweight, no dependencies, modular CSS. Forked from dbushell/Pikaday, enhanced with some experimental functionality.",
   "keywords": [
     "datepicker",
