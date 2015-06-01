@@ -1073,7 +1073,7 @@
                 var isHighlighted = checkHighlightedDays(day, opts.highlightDays),
                     isInHighlightGroup = checkHighlightRange(day, opts.highlightRanges);
 
-                row.push((dayNumber, month, year, isSelected, isToday, isDisabled, isEmpty, isHighlighted, isInHighlightGroup, opts.showDaysInNextAndPreviousMonths, monthDifference));
+                row.push(renderDay(dayNumber, month, year, isSelected, isToday, isDisabled, isEmpty, isHighlighted, isInHighlightGroup, opts.showDaysInNextAndPreviousMonths, monthDifference));
 
                 if (++r === 7) {
                     if (opts.showWeekNumber) {
