@@ -647,7 +647,7 @@
 
             opts.theme = (typeof opts.theme) == 'string' && opts.theme ? opts.theme : null;
 
-            opts.bound = !!(opts.bound !== undefined ? opts.field && opts.bound : opts.field);
+            opts.bound = !!(opts.bound !== undefined ? ((opts.trigger || opts.field) && opts.bound) : opts.field);
 
             opts.trigger = (opts.trigger && opts.trigger.nodeName) ? opts.trigger : opts.field;
 
@@ -918,7 +918,7 @@
             this.el.innerHTML = html;
 
             if (opts.bound) {
-                if (opts.field.type !== 'hidden') {
+                if ((opts.trigger && !opts.field) || (opts.field.type !== 'hidden')) {
                     sto(function () {
                         opts.trigger.focus();
                     }, 1);
